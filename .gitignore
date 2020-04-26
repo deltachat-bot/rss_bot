@@ -1,0 +1,7 @@
+config/local.json
+*.swp
+*.pyc
+.idea/
+__pycache__/
+venv/
+
