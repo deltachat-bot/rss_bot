@@ -1,4 +1,4 @@
-import feedparser
+#import feedparser
 from deltabot.hookspec import deltabot_hookimpl
 
 
