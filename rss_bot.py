@@ -21,7 +21,7 @@ def subscribe(command):
     rss_link = command.payload
     feed = feedparser.parse(rss_link)
     try:
-        db_subscribe(rss_link, contact.addr, feed.modified)
+        db_subscribe(contact.addr, rss_link, feed.modified)
     except AttributeError:
         return "No valid RSS feed found at " + rss_link
     return "Successfully subscribed to " + rss_link + "\n\n"
@@ -35,7 +35,10 @@ def unsubscribe(command):
     """
     contact = command.message.get_sender_contact()
     rss_link = command.payload
-    db_unsubscribe(rss_link, contact.addr)
+    try:
+        db_unsubscribe(rss_link, contact.addr)
+    except KeyError:
+        return "No subscription found - have you typed the link correctly?"
     return "Successfully unsubscribed from " + rss_link
 
 

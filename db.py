@@ -1,42 +1,53 @@
-from sqlalchemy import create_engine, Column, Integer, String, and_
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+import sqlite3
 
 
-Base = declarative_base()
+class DB(object):
+    def __init__(self):
+        dbfile = "rss_bot.sqlite"
+        self.conn = sqlite3.connect(dbfile)
+        self.cur = self.conn.cursor()
+        self.create()
+
+    def execute(self, *args, **kwargs):
+        return self.cur.execute(*args, **kwargs)
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+    def create(self):
+        """ Initialize database schema """
+        self.cur.executescript("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+                addr        TEXT,
+                url         TEXT,
+                modified    TEXT
+                );
+        """)
 
 
-class Subscriptions(Base):
-    __tablename__ = "subscriptions"
+def db_subscribe(addr, url, modified):
+    """ Add a RSS subscription to the database.
 
-    id = Column(Integer, primary_key=True)
-    addr = Column(String)
-    url = Column(String)
-    modified = Column(String)
-
-
-def engine():
-    return create_engine('sqlite:///rss_bot.sqlite', echo=True)
-
-
-Base.metadata.create_all(engine())
-Session = sessionmaker(bind=engine())
-
-
-def db_subscribe(url, addr, modified):
-    session = Session()
-    session.add(Subscriptions(addr=addr, url=url, modified=modified))
-    session.commit()
+    :param addr: (string) e-mail address
+    :param url: (string) link to valid RSS feed
+    :param modified: (string) datestring when the RSS feed was last checked
+    """
+    db = DB()
+    db.execute("INSERT INTO subscriptions(addr, url, modified) VALUES(?, ?, ?);",
+               (addr, url, modified))
+    db.commit()
+    db.close()
 
 
 def db_unsubscribe(url, addr):
-    subscriptions_table = Subscriptions()
-    # throws AttributeError: 'Subscriptions' object has no attribute 'delete'
-    subscriptions_table.delete().where(and_(Subscriptions.addr == addr, Subscriptions.url == url)).execute()
-
-
-if __name__ == "__main__":
-    print("unsubscribing:")
-    addr = "compl4xx@testrun.org"
-    url = "https://delta.chat/feed.xml"
-    db_unsubscribe(url, addr)
+    db = DB()
+    db.execute("SELECT * FROM subscriptions WHERE url = ? AND addr = ?;", (url, addr))
+    if db.cur.fetchone() is None:
+        raise KeyError
+    db.execute("DELETE FROM subscriptions WHERE url = ? AND addr = ?;", (url, addr))
+    db.commit()
+    db.close()
