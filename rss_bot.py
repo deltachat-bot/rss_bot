@@ -35,7 +35,7 @@ def subscribe(command):
         return "No valid RSS feed found at " + rss_link
     except TypeError:
         return "You are already subscribed to " + rss_link
-    return "Successfully subscribed to " + rss_link + "\n\n"
+    return "Success: you subscribed to " + rss_link
 
 
 def unsubscribe(command):
@@ -51,7 +51,7 @@ def unsubscribe(command):
         db_unsubscribe(rss_link, contact.addr)
     except KeyError:
         return "No subscription found - have you typed the link correctly?"
-    return "Successfully unsubscribed from " + rss_link
+    return "You have unsubscribed from " + rss_link
 
 
 def list(command):
