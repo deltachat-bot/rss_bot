@@ -51,3 +51,16 @@ def db_unsubscribe(url, addr):
     db.execute("DELETE FROM subscriptions WHERE url = ? AND addr = ?;", (url, addr))
     db.commit()
     db.close()
+
+
+def db_list(addr):
+    """ Return a string with all RSS feeds the address is subscribed to.
+
+    :param addr: (string) e-mail address
+    :return: (list of tuples(string, )) URLs to RSS feeds.
+    """
+    db = DB()
+    db.execute("SELECT url FROM subscriptions WHERE addr = ?;", (addr, ))
+    result = db.cur.fetchall()
+    db.close()
+    return result

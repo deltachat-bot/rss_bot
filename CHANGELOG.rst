@@ -5,4 +5,7 @@ Changelog
 -----
 
 - initial release
-- added "/subscribe" and "/unsubscribe" commands
+- added "/subscribe" command
+- added "/unsubscribe" command
+- added "/list" command
+
