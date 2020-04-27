@@ -1,6 +1,7 @@
 import feedparser
 from deltabot.hookspec import deltabot_hookimpl
 from db import db_subscribe, db_unsubscribe, db_list
+from os import fork, getpid, kill
 
 version = '0.1.0'
 
@@ -10,6 +11,10 @@ def deltabot_init(bot):
     bot.commands.register(name="/subscribe", func=subscribe)
     bot.commands.register(name="/unsubscribe", func=unsubscribe)
     bot.commands.register(name="/list", func=list)
+    # Start RSS feed crawling loop in a new process:
+    parent_pid = getpid()
+    if not fork():
+        crawl(parent_pid)
 
 
 def subscribe(command):
@@ -63,5 +68,11 @@ def post(filter):
     pass
 
 
-def crawl():
-    pass
+def crawl(parent_pid):
+    while 1:
+        # exit cleanly if parent process stopped
+        try:
+            kill(parent_pid, 0)
+        except OSError:
+            exit(0)
+        
