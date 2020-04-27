@@ -1,4 +1,4 @@
-config/local.json
+rss_bot.sqlite
 *.swp
 *.pyc
 .idea/

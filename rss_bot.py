@@ -1,5 +1,6 @@
 import feedparser
 from deltabot.hookspec import deltabot_hookimpl
+from db import db_subscribe
 
 version = '0.1.0'
 
@@ -20,7 +21,7 @@ def subscribe(command):
     rss_link = command.payload
     feed = feedparser.parse(rss_link)
     try:
-        db_save(rss_link, contact.addr, feed.modified)
+        db_subscribe(rss_link, contact.addr, feed.modified)
     except AttributeError:
         return "No valid RSS feed found at " + rss_link
     return "Successfully subscribed to " + rss_link + "\n\n"
@@ -43,5 +44,3 @@ def crawl():
     pass
 
 
-def db_save(url, addr, modified):
-    pass
