@@ -1,6 +1,6 @@
 import feedparser
 from deltabot.hookspec import deltabot_hookimpl
-from db import db_subscribe
+from db import db_subscribe, db_unsubscribe
 
 version = '0.1.0'
 
@@ -33,7 +33,10 @@ def unsubscribe(command):
     To use it, tell the bot the RSS feed link, starting with "/unsubscribe".
     Example: "/unsubscribe https://delta.chat/feed.xml"
     """
-    pass
+    contact = command.message.get_sender_contact()
+    rss_link = command.payload
+    db_unsubscribe(rss_link, contact.addr)
+    return "Successfully unsubscribed from " + rss_link
 
 
 def post(filter):
