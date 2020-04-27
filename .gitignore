@@ -1,4 +1,5 @@
 rss_bot.sqlite
+crawled
 *.swp
 *.pyc
 .idea/

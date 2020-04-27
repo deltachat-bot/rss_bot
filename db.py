@@ -37,6 +37,10 @@ def db_subscribe(addr, url, modified):
     :param modified: (string) datestring when the RSS feed was last checked
     """
     db = DB()
+    db.execute("SELECT url FROM subscriptions WHERE addr = ? AND url = ?;", (addr, url))
+    # If already subscribed, raise TypeError
+    if db.cur.fetchone() is not None:
+        raise TypeError
     db.execute("INSERT INTO subscriptions(addr, url, modified) VALUES(?, ?, ?);",
                (addr, url, modified))
     db.commit()
@@ -61,6 +65,14 @@ def db_list(addr):
     """
     db = DB()
     db.execute("SELECT url FROM subscriptions WHERE addr = ?;", (addr, ))
+    result = db.cur.fetchall()
+    db.close()
+    return result
+
+
+def get_subscriptions():
+    db = DB()
+    db.execute("SELECT * FROM subscriptions;")
     result = db.cur.fetchall()
     db.close()
     return result
