@@ -6,7 +6,7 @@ from time import sleep
 import html2text
 
 
-version = '0.1.0'
+version = '0.1.1'
 
 
 @deltabot_hookimpl
