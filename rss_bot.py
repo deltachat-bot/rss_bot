@@ -1,6 +1,6 @@
 import feedparser
 from deltabot.hookspec import deltabot_hookimpl
-from db import db_subscribe, db_unsubscribe, db_list, get_subscriptions
+from db import db_subscribe, db_unsubscribe, db_list, get_subscriptions, update_modified
 from os import fork, getpid, kill
 from time import sleep
 import html2text
@@ -30,7 +30,15 @@ def subscribe(command):
     rss_link = command.payload
     feed = feedparser.parse(rss_link)
     try:
-        db_subscribe(contact.addr, rss_link, feed.modified)
+        modified = feed.modified_parsed
+    except KeyError:
+        modified = tuple()
+    try:
+        etag = feed.etag
+    except KeyError:
+        etag = ""
+    try:
+        db_subscribe(contact.addr, rss_link, modified, etag)
     except AttributeError:  # not sure whether this is enough to check RSS validity
         return "No valid RSS feed found at " + rss_link
     except TypeError:
@@ -84,7 +92,9 @@ def crawl(parent_pid, bot):
             addr = row[1]
             url = row[2]
             modified = row[3]
-            feed = feedparser.parse(url, modified=modified)
+            etag = row[4]
+            feed = feedparser.parse(url, modified=modified, etag=etag)
+            print(url + ": " + str(feed.status))
             if feed.status == 304:
                 print("No updates on " + url + ". Feed skipped.")
                 continue
@@ -97,13 +107,14 @@ def crawl(parent_pid, bot):
                          mark_down_formatting(entry.summary, entry.link)]
                 text = "\n".join(infos)
                 # get chat by addr
-                print(text)
-                print(addr)
                 contact = bot.account.get_contact_by_addr(addr)
                 chat = bot.account.create_chat_by_contact(contact)
                 # send message to chat
                 chat.send_text(text)
-        sleep(10)
+                if entry.updated_parsed > modified:
+                    modified = entry.updated_parsed
+            update_modified(addr, url, modified, feed.etag)
+        sleep(120)
 
 
 def mark_down_formatting(html_text, url):

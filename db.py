@@ -24,25 +24,27 @@ class DB(object):
                 id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
                 addr        TEXT,
                 url         TEXT,
-                modified    TEXT
+                modified    BLOB,
+                etag        TEXT
                 );
         """)
 
 
-def db_subscribe(addr, url, modified):
+def db_subscribe(addr, url, modified, etag):
     """ Add a RSS subscription to the database.
 
     :param addr: (string) e-mail address
     :param url: (string) link to valid RSS feed
-    :param modified: (string) datestring when the RSS feed was last checked
+    :param modified: (9-tuple) dates when the RSS feed was last checked
+    :param etag: (string) unique ETag of the last checked RSS feed
     """
     db = DB()
     db.execute("SELECT url FROM subscriptions WHERE addr = ? AND url = ?;", (addr, url))
     # If already subscribed, raise TypeError
     if db.cur.fetchone() is not None:
         raise TypeError
-    db.execute("INSERT INTO subscriptions(addr, url, modified) VALUES(?, ?, ?);",
-               (addr, url, modified))
+    db.execute("INSERT INTO subscriptions(addr, url, modified, etag) VALUES(?, ?, ?, ?);",
+               (addr, url, modified, etag))
     db.commit()
     db.close()
 
@@ -76,3 +78,11 @@ def get_subscriptions():
     result = db.cur.fetchall()
     db.close()
     return result
+
+
+def update_modified(addr, url, modified, etag):
+    db = DB()
+    db.execute("UPDATE subscriptions SET modified = ?, etag = ? WHERE addr = ? AND url = ?;",
+               (modified, etag, addr, url))
+    db.commit()
+    db.close()
