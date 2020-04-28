@@ -31,14 +31,10 @@ def subscribe(command):
     feed = feedparser.parse(rss_link)
     try:
         modified = feed.modified_parsed
-    except KeyError:
+    except AttributeError:
         modified = tuple()
     try:
-        etag = feed.etag
-    except KeyError:
-        etag = ""
-    try:
-        db_subscribe(contact.addr, rss_link, modified, etag)
+        db_subscribe(contact.addr, rss_link, modified)
     except AttributeError:  # not sure whether this is enough to check RSS validity
         return "No valid RSS feed found at " + rss_link
     except TypeError:
@@ -92,13 +88,12 @@ def crawl(parent_pid, bot):
             addr = row[1]
             url = row[2]
             modified = row[3]
-            etag = row[4]
-            feed = feedparser.parse(url, modified=modified, etag=etag)
+            feed = feedparser.parse(url, modified=modified)
             print(url + ": " + str(feed.status))
             if feed.status == 304:
-                print("No updates on " + url + ". Feed skipped.")
                 continue
             for entry in feed.entries:
+                # create post
                 infos = [entry.title,
                          "",  # Extra new line
                          "Posted at " + entry.published,
@@ -111,10 +106,15 @@ def crawl(parent_pid, bot):
                 chat = bot.account.create_chat_by_contact(contact)
                 # send message to chat
                 chat.send_text(text)
+                # update the date of the last modified message
                 if entry.updated_parsed > modified:
                     modified = entry.updated_parsed
-            update_modified(addr, url, modified, feed.etag)
-        sleep(120)
+            try:
+                modified = feed.modified_parsed
+            except AttributeError:
+                modified = tuple()
+            update_modified(addr, url, modified)
+        sleep(60)
 
 
 def mark_down_formatting(html_text, url):

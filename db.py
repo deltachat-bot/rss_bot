@@ -1,4 +1,5 @@
 import sqlite3
+import json
 
 
 class DB(object):
@@ -24,13 +25,12 @@ class DB(object):
                 id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
                 addr        TEXT,
                 url         TEXT,
-                modified    BLOB,
-                etag        TEXT
+                modified    BLOB
                 );
         """)
 
 
-def db_subscribe(addr, url, modified, etag):
+def db_subscribe(addr, url, modified):
     """ Add a RSS subscription to the database.
 
     :param addr: (string) e-mail address
@@ -43,8 +43,9 @@ def db_subscribe(addr, url, modified, etag):
     # If already subscribed, raise TypeError
     if db.cur.fetchone() is not None:
         raise TypeError
-    db.execute("INSERT INTO subscriptions(addr, url, modified, etag) VALUES(?, ?, ?, ?);",
-               (addr, url, modified, etag))
+    modified_json = json.dumps(modified)
+    db.execute("INSERT INTO subscriptions(addr, url, modified) VALUES(?, ?, ?);",
+               (addr, url, modified_json))
     db.commit()
     db.close()
 
@@ -77,12 +78,20 @@ def get_subscriptions():
     db.execute("SELECT * FROM subscriptions;")
     result = db.cur.fetchall()
     db.close()
-    return result
+    # convert modified_json to tuple
+    rows = []
+    for row in result:
+        row_list = list(row)
+        modified = tuple(list(json.loads(row_list[3])))
+        row_list[3] = modified
+        rows.append(tuple(row_list))
+    return rows
 
 
-def update_modified(addr, url, modified, etag):
+def update_modified(addr, url, modified):
     db = DB()
-    db.execute("UPDATE subscriptions SET modified = ?, etag = ? WHERE addr = ? AND url = ?;",
-               (modified, etag, addr, url))
+    modified_json = json.dumps(modified)
+    db.execute("UPDATE subscriptions SET modified = ? WHERE addr = ? AND url = ?;",
+               (modified_json, addr, url))
     db.commit()
     db.close()
