@@ -5,6 +5,7 @@ from os import fork, getpid, kill
 from time import sleep
 import html2text
 
+
 version = '0.1.0'
 
 
@@ -12,7 +13,7 @@ version = '0.1.0'
 def deltabot_init(bot):
     bot.commands.register(name="/subscribe", func=subscribe)
     bot.commands.register(name="/unsubscribe", func=unsubscribe)
-    bot.commands.register(name="/list", func=list)
+    bot.commands.register(name="/list", func=list_feeds)
     # Start RSS feed crawling loop in a new process:
     parent_pid = getpid()
     if not fork():
@@ -30,11 +31,7 @@ def subscribe(command):
     rss_link = command.payload
     feed = feedparser.parse(rss_link)
     try:
-        modified = feed.modified_parsed
-    except AttributeError:
-        modified = tuple()
-    try:
-        db_subscribe(contact.addr, rss_link, modified)
+        db_subscribe(contact.addr, rss_link, feed.modified_parsed)
     except AttributeError:  # not sure whether this is enough to check RSS validity
         return "No valid RSS feed found at " + rss_link
     except TypeError:
@@ -58,7 +55,7 @@ def unsubscribe(command):
     return "You have unsubscribed from " + rss_link
 
 
-def list(command):
+def list_feeds(command):
     """ List all RSS feeds you are subscribed to.
 
     To use it, just send "/list" to the bot.
@@ -88,31 +85,40 @@ def crawl(parent_pid, bot):
             addr = row[1]
             url = row[2]
             modified = row[3]
+            newest_date = modified
             feed = feedparser.parse(url, modified=modified)
-            print(url + ": " + str(feed.status))
             if feed.status == 304:
                 continue
             for entry in feed.entries:
                 # create post
-                infos = [entry.title,
-                         "",  # Extra new line
-                         "Posted at " + entry.published,
-                         "Read more at " + entry.link,
-                         "",  # Extra new line
-                         mark_down_formatting(entry.summary, entry.link)]
+                try:
+                    infos = [entry.title,
+                             "",  # Extra new line
+                             "Posted at " + entry.published,
+                             "Read more at " + entry.link,
+                             "",  # Extra new line
+                             mark_down_formatting(entry.summary, entry.link)]
+                except AttributeError:
+                    infos = [entry.title,
+                             "",
+                             "Read more at " + entry.link,
+                             "",
+                             mark_down_formatting(entry.summary, entry.link)]
                 text = "\n".join(infos)
                 # get chat by addr
                 contact = bot.account.get_contact_by_addr(addr)
                 chat = bot.account.create_chat_by_contact(contact)
                 # send message to chat
-                chat.send_text(text)
-                # update the date of the last modified message
-                if entry.updated_parsed > modified:
-                    modified = entry.updated_parsed
-            try:
-                modified = feed.modified_parsed
-            except AttributeError:
-                modified = tuple()
+                try:
+                    print(entry.updated_parsed)
+                    print(newest_date)
+                    if entry.updated_parsed > newest_date:
+                        chat.send_text(text)
+                    # update the date of the last modified message
+                    if entry.updated_parsed > modified:
+                        modified = entry.updated_parsed
+                except AttributeError:
+                    print("no updated date value")
             update_modified(addr, url, modified)
         sleep(60)
 
