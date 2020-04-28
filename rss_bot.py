@@ -4,6 +4,7 @@ from db import db_subscribe, db_unsubscribe, db_list, get_subscriptions, update_
 from os import fork, getpid, kill
 from time import sleep
 import html2text
+from bs4 import BeautifulSoup
 
 
 version = '0.1.1'
@@ -110,8 +111,6 @@ def crawl(parent_pid, bot):
                 chat = bot.account.create_chat_by_contact(contact)
                 # send message to chat
                 try:
-                    print(entry.updated_parsed)
-                    print(newest_date)
                     if entry.updated_parsed > newest_date:
                         chat.send_text(text)
                     # update the date of the last modified message
@@ -124,6 +123,11 @@ def crawl(parent_pid, bot):
 
 
 def mark_down_formatting(html_text, url):
+    # remove images
+    soup = BeautifulSoup(html_text)
+    soup.img.decompose()
+    soup.a.unwrap()
+
     h = html2text.HTML2Text()
 
     # Options to transform URL into absolute links
@@ -132,6 +136,6 @@ def mark_down_formatting(html_text, url):
     h.wrap_links = False
     h.baseurl = url
 
-    md_text = h.handle(html_text)
+    md_text = h.handle(str(soup))
 
     return md_text
