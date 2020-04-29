@@ -128,8 +128,14 @@ def format_entry(entry):
     """
     # remove images and link tags
     soup = BeautifulSoup(entry.summary)
-    soup.img.decompose()
-    soup.a.unwrap()
+    try:
+        soup.img.decompose()
+    except AttributeError:
+        pass  # no img tags
+    try:
+        soup.a.unwrap()
+    except AttributeError:
+        pass  # no a tags
 
     # convert HTML to markdown
     h = html2text.HTML2Text()
