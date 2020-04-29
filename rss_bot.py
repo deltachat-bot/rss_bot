@@ -12,6 +12,10 @@ version = '0.1.1'
 
 @deltabot_hookimpl
 def deltabot_init(bot):
+    """ Init function of the bot, gets called by deltabot. It registers commands and starts the crawl loop.
+
+    :param bot (deltabot.Deltabot object) the Deltabot object of this particular bot.
+    """
     bot.commands.register(name="/subscribe", func=subscribe)
     bot.commands.register(name="/unsubscribe", func=unsubscribe)
     bot.commands.register(name="/list", func=list_feeds)
@@ -75,6 +79,11 @@ def post(filter):
 
 
 def crawl(parent_pid, bot):
+    """ Never ending loop which crawls new RSS messages once a minute, and sends them to subscribers.
+
+    :param parent_pid (integer) This is a fork of the deltabot process; exit if parent process dies.
+    :param bot (deltabot.Deltabot object) the Deltabot object of this particular bot.
+    """
     while 1:
         # exit cleanly if parent process stopped
         try:

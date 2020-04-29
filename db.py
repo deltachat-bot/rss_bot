@@ -4,18 +4,26 @@ import json
 
 class DB(object):
     def __init__(self):
+        """ Create a DB object to manage connections.
+
+        Each function can create their own DB object.
+        Please close the connection at the end of the function.
+        """
         dbfile = "rss_bot.sqlite"
         self.conn = sqlite3.connect(dbfile)
         self.cur = self.conn.cursor()
         self.create()
 
     def execute(self, *args, **kwargs):
+        """ Shortcut function to execute sqlite commands. """
         return self.cur.execute(*args, **kwargs)
 
     def commit(self):
+        """ Shortcut function to commit executed changes to the DB. """
         self.conn.commit()
 
     def close(self):
+        """ Shortcut function to close the DB. """
         self.conn.close()
 
     def create(self):
@@ -31,11 +39,11 @@ class DB(object):
 
 
 def db_subscribe(addr, url, modified):
-    """ Add a RSS subscription to the database.
+    """ DB call to add a RSS subscription to the database. Called by rss_bot.subscribe()
 
-    :param addr: (string) e-mail address
+    :param addr: (string) e-mail address of the subscriber
     :param url: (string) link to valid RSS feed
-    :param modified: (9-tuple) dates when the RSS feed was last checked
+    :param modified: (9-tuple) dates when the RSS feed was last modified
     """
     db = DB()
     db.execute("SELECT url FROM subscriptions WHERE addr = ? AND url = ?;", (addr, url))
@@ -50,6 +58,12 @@ def db_subscribe(addr, url, modified):
 
 
 def db_unsubscribe(url, addr):
+    """ DB call to unsubscribe users from feeds. Called by rss_bot.unsubscribe()
+
+    Raises a Key Error if no subscription is found.
+    :param url: (string) URL of the RSS Feed to unsubscribe from
+    :param addr: (string) email address of the subscriber
+    """
     db = DB()
     db.execute("SELECT * FROM subscriptions WHERE url = ? AND addr = ?;", (url, addr))
     if db.cur.fetchone() is None:
@@ -60,7 +74,7 @@ def db_unsubscribe(url, addr):
 
 
 def db_list(addr):
-    """ Return a string with all RSS feeds the address is subscribed to.
+    """ Return a string with all RSS feeds the address is subscribed to. Called by rss_bot.list_feeds()
 
     :param addr: (string) e-mail address
     :return: (list of tuples(string, )) URLs to RSS feeds.
@@ -73,6 +87,10 @@ def db_list(addr):
 
 
 def get_subscriptions():
+    """ DB call to get all subscriptions. Called by rss_bot.crawl()
+
+    :return: rows: (list of tuples) All subscriptions the bot knows of.
+    """
     db = DB()
     db.execute("SELECT * FROM subscriptions;")
     result = db.cur.fetchall()
@@ -88,6 +106,12 @@ def get_subscriptions():
 
 
 def update_modified(addr, url, modified):
+    """ DB call to update the date when a RSS feed was last modified. Called by rss_bot.crawl()
+
+    :param addr: (string) e-mail address of the subscriber
+    :param url: (string) link to valid RSS feed
+    :param modified: (9-tuple) dates when the RSS feed was last modified
+    """
     db = DB()
     modified_json = json.dumps(modified)
     db.execute("UPDATE subscriptions SET modified = ? WHERE addr = ? AND url = ?;",
