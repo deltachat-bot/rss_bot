@@ -88,24 +88,13 @@ def crawl(parent_pid, bot):
             modified = row[3]
             newest_date = modified
             feed = feedparser.parse(url, modified=modified)
-            if feed.status == 304:
-                continue
+            try:
+                if feed.status == 304:
+                    continue
+            except AttributeError:
+                pass
             for entry in feed.entries:
-                # create post
-                try:
-                    infos = [entry.title,
-                             "",  # Extra new line
-                             "Posted at " + entry.published,
-                             "Read more at " + entry.link,
-                             "",  # Extra new line
-                             mark_down_formatting(entry.summary, entry.link)]
-                except AttributeError:
-                    infos = [entry.title,
-                             "",
-                             "Read more at " + entry.link,
-                             "",
-                             mark_down_formatting(entry.summary, entry.link)]
-                text = "\n".join(infos)
+                text = format_entry(entry)
                 # get chat by addr
                 contact = bot.account.get_contact_by_addr(addr)
                 chat = bot.account.create_chat_by_contact(contact)
@@ -117,25 +106,48 @@ def crawl(parent_pid, bot):
                     if entry.updated_parsed > modified:
                         modified = entry.updated_parsed
                 except AttributeError:
-                    print("no updated date value")
+                    pass  # no updated date value
             update_modified(addr, url, modified)
         sleep(60)
 
 
-def mark_down_formatting(html_text, url):
-    # remove images
-    soup = BeautifulSoup(html_text)
+def format_entry(entry):
+    """ This function formats the HTML output of RSS feeds to beautiful Delta messages.
+
+    :param entry (dictionary) An RSS feed entry dictionary returned by feedparser.parse()
+    :return: text (string) a formatted Delta Chat message to be sent to the user
+    """
+    # remove images and link tags
+    soup = BeautifulSoup(entry.summary)
     soup.img.decompose()
     soup.a.unwrap()
 
+    # convert HTML to markdown
     h = html2text.HTML2Text()
-
     # Options to transform URL into absolute links
     h.body_width = 0
     h.protect_links = True
     h.wrap_links = False
-    h.baseurl = url
-
+    h.baseurl = entry.link
     md_text = h.handle(str(soup))
 
-    return md_text
+    # Create message out of entry attributes
+    parts = []
+    try:
+        parts.append(entry.title)
+    except AttributeError:
+        pass
+    parts.append("")  # Extra new line
+    try:
+        parts.append("Posted at " + entry.published)
+    except AttributeError:
+        pass
+    try:
+        parts.append("Read more at " + entry.link)
+    except AttributeError:
+        pass
+    parts.append("")  # Extra new line
+    parts.append(md_text)
+    text = "\n".join(parts)
+
+    return text

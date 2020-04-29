@@ -36,7 +36,6 @@ def db_subscribe(addr, url, modified):
     :param addr: (string) e-mail address
     :param url: (string) link to valid RSS feed
     :param modified: (9-tuple) dates when the RSS feed was last checked
-    :param etag: (string) unique ETag of the last checked RSS feed
     """
     db = DB()
     db.execute("SELECT url FROM subscriptions WHERE addr = ? AND url = ?;", (addr, url))
