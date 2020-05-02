@@ -36,7 +36,7 @@ def subscribe(command):
     rss_link = command.payload
     feed = feedparser.parse(rss_link)
     try:
-        db_subscribe(contact.addr, rss_link, feed.modified_parsed)
+        db_subscribe(command.bot, contact.addr, rss_link, feed.modified_parsed)
     except AttributeError:  # not sure whether this is enough to check RSS validity
         return "No valid RSS feed found at " + rss_link
     except TypeError:
@@ -54,7 +54,7 @@ def unsubscribe(command):
     contact = command.message.get_sender_contact()
     rss_link = command.payload
     try:
-        db_unsubscribe(rss_link, contact.addr)
+        db_unsubscribe(command.bot, rss_link, contact.addr)
     except KeyError:
         return "No subscription found - have you typed the link correctly?"
     return "You have unsubscribed from " + rss_link
@@ -67,7 +67,7 @@ def list_feeds(command):
     :return: String which gets replied to the user
     """
     replylist = ["You are subscribed to these RSS feeds:"]
-    for url in db_list(command.message.get_sender_contact().addr):
+    for url in db_list(command.bot, command.message.get_sender_contact().addr):
         replylist.append(url[0])
     if len(replylist) == 1:
         return "You aren't subscribed to any RSS feeds yet. Type '/help' to find out how to use this bot."
@@ -90,7 +90,7 @@ def crawl(parent_pid, bot):
             kill(parent_pid, 0)
         except OSError:
             exit(0)
-        subscriptions = get_subscriptions()
+        subscriptions = get_subscriptions(bot)
         for row in subscriptions:
             addr = row[1]
             url = row[2]
@@ -116,7 +116,7 @@ def crawl(parent_pid, bot):
                         modified = entry.updated_parsed
                 except AttributeError:
                     pass  # no updated date value
-            update_modified(addr, url, modified)
+            update_modified(bot, addr, url, modified)
         sleep(60)
 
 
